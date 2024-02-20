@@ -1,0 +1,39 @@
+from models.artist import Artist
+from repository.base_repository import BaseRepository, _BaseG_Compatible
+
+from sqlalchemy.orm.session import Session
+
+from utils.repo_func_deco import Repo_Deco
+from models.song import Song
+from models.artist import Artist
+from schemas.artist import ArtistSchema_Update
+
+
+class ArtistRepository(BaseRepository):
+    _relationship = [Artist.songs]
+    
+    @BaseRepository.session_wrapped_decorator
+    def create(self, instance:_BaseG_Compatible, *, db: Session|None=None):
+        assert db is not None
+        db.add(instance)
+        db.commit()
+        #db.refresh(instance) #no eagerload for refresh, go requerying
+        return instance.id
+
+    # def update_remove_child(db:Session, parent:Artist, child:Song):
+    #     parent.songs.remove(child)
+    #     db.commit()
+
+    @BaseRepository.session_wrapped_decorator
+    @Repo_Deco.update_wrap
+    def update(self, *, db:Session|None=None, 
+                      instance:_BaseG_Compatible,  
+                      updates:ArtistSchema_Update
+                      ):  
+        d = updates.model_dump(exclude_unset=True, exclude_defaults=True, exclude={'songs'})
+        #l = [(attr, val) for attr, val in updates.model_dump().items() if isinstance(val, list)]
+        songs_pydantic = updates.songs
+        songs_orm = [Song(**s_dict.model_dump(exclude_unset=True)) for s_dict in songs_pydantic]
+        new_artist = Artist(**d, id=instance.id)
+        new_artist.songs.extend(songs_orm)
+        return new_artist

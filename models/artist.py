@@ -8,6 +8,7 @@ from models.base import Base, BaseG
 import models.song
 from sqlalchemy.ext.mutable import MutableList
 
+
 class Artist(BaseG):
     __tablename__ = 'Artist_table'
     #id:Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)

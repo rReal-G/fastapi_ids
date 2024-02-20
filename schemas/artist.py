@@ -5,7 +5,6 @@ import schemas.song
 
 
 
-
 class ArtistSchema_Create(BaseModel):
     created_at: date | None = None
     name: str 
