@@ -1,4 +1,4 @@
-
+from oauthlib.common import generate_token
 import functools
 from fastapi import HTTPException
 from repository import base_repository
