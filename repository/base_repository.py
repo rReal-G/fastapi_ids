@@ -4,16 +4,15 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm.session import Session, sessionmaker
 from sqlalchemy.orm import selectinload
 
-from utils.decorators import Utils_Decorators
+import utils.decorators as deco
 from models.song import Song
 from models.artist import Artist
-from models.base import BaseG
 from schemas.artist import ArtistSchema_Update
+from repository.baseG_type import _BaseG_Compatible
 
 
 
-#_BaseModel_Schema_Update = TypeVar('_BaseModel_Schema_Update', bound=BaseModel)
-_BaseG_Compatible = TypeVar('_BaseG_Compatible', bound=BaseG)
+
 
 class BaseRepository:
     SQLALCHEMY_DATABASE_URL = "sqlite:///database.db"
@@ -45,7 +44,7 @@ class BaseRepository:
             query = query.options(selectinload(relala))
         return query.all()
     
-    @Utils_Decorators.toggle_raise_for_not_found(on=True, detail='resource not found')
+    @deco.Utils_Decorators.toggle_raise_for_not_found(on=True, detail='resource not found')
     @session_wrapped_decorator
     def read_by_id(self, instance_id:int, 
                    orm_class: type[_BaseG_Compatible], 
@@ -82,7 +81,7 @@ class ArtistRepository(BaseRepository):
     #     db.commit()
 
     @BaseRepository.session_wrapped_decorator
-    @Utils_Decorators.update_wrap
+    @deco.Utils_Decorators.update_wrap
     def update(self, *, db:Session|None=None, 
                       instance:_BaseG_Compatible,  
                       updates:ArtistSchema_Update

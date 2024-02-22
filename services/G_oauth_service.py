@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 import inspect
+import json
 import time
 from typing import Annotated, Any, Callable, Coroutine, Dict
 import aiohttp
@@ -10,32 +11,64 @@ import ssl
 import logging
 from typing import Protocol
 
-class AuthContext(Protocol):
+import middlewares.G_AuthenticationMiddleware
+from utils.decorators import Utils_Decorators  
+
+@dataclass
+class AuthContext():
     req:Request
-    auth_header:str|None 
+    scope:Any
+    auth_header:str|None
+    auth_middleware:'middlewares.G_AuthenticationMiddleware.authentication_middleware_G'
+    err_mess:list[str] = field(default_factory = lambda: [])
     
 class AuthHandlerProtocol(Protocol):
     _next:'AuthHandlerProtocol|None'
-    def __init__(self, next_handler:'AuthHandlerProtocol|None'=None, 
-                 *, context:AuthContext):
-        self._next = next_handler
+    _ctx:AuthContext
     def set_next(self, next_handler:'AuthHandlerProtocol') -> None:
         self._next = next_handler
-    def call_next(self, ctx:AuthContext):
+    async def call_next(self):
         if self._next:
-            return self._next.handle(ctx)
-    def handle(self, ctx:AuthContext) -> Any:
+            return await self._next.handle(self._ctx)
+    async def handle(self, ctx:AuthContext) -> Any:
         ...
-        
-     
 
-class TokenBasedHandler(AuthHandlerProtocol):   
-    def handle(self, ctx:AuthContext):
+class BaseHandler(AuthHandlerProtocol):
+    def __init__(self, next_handler:'AuthHandlerProtocol|None'=None, 
+                *, ctx:AuthContext):
+        self._next = next_handler
+        self._ctx = ctx   
+    async def handle(self, ctx:AuthContext) -> Any:
         ...
+    async def extract_from_access_token(self, access_token):
+        og_decoded = await self._ctx.auth_middleware.verify_token_G(access_token)
+        allowed_scopes = og_decoded['scope']
+        sub = og_decoded['sub']
+        return UserInfo(sub, allowed_scopes)
+
+    
+class TokenBasedHandler(BaseHandler):
+    #@Utils_Decorators.try_catch_wrap   
+    async def handle(self):
+        if not self._ctx.auth_header:
+            self._ctx.err_mess.append('missing authorization header')
+            return await self.call_next()
+        access_token = self._ctx.auth_header.split(' ')[-1]
+        user_info = await self.extract_from_access_token(access_token)
+        self._ctx.scope['userG'] = user_info
+        return self._ctx
+
+
         
-class CookieBasedHandler(AuthHandlerProtocol):
-    def handle(self, ctx:AuthContext):
-        ...
+class CookieBasedHandler(BaseHandler):
+    async def handle(self, ctx:AuthContext):
+        user_profile = self._ctx.req.session.get(G_Oauth_Svc.G_USER_PROFILE_SS_KEY, None)
+        access_token = self._ctx.req.session.get(G_Oauth_Svc.G_ACCESS_TOKEN_SS_KEY, None)
+        if user_profile and access_token:            
+            user_info = await self.extract_from_access_token(access_token['token'])
+            user_info.userprofile = user_profile
+            self._ctx.scope['userG'] = user_info
+            return self._ctx
 
 @dataclass
 class UserInfo:
@@ -54,8 +87,9 @@ class G_Oauth_Svc:
     USERINFO_ENDPOINT = f"{IDS4_URL}/connect/userinfo"
     WELL_KNOWN_ENDPOINT = f"{IDS4_URL}/.well-known/openid-configuration"
     REDIRECT_URI = 'http://localhost:8000/callbackG'
-    G_ACCESS_TOKEN_KEY = 'G_ACCESS_TOKEN_KEY'
-
+    G_ACCESS_TOKEN_SS_KEY = 'G_ACCESS_TOKEN_KEY'
+    G_USER_PROFILE_SS_KEY = 'G_USER_INFO_SS_KEY'
+    
     @property
     def audience(self):
         return self._audience
@@ -112,8 +146,9 @@ class G_Oauth_Svc:
             audience=self.audience
         )
         logging.log(logging.INFO, og_decoded)
-        if [s for s in self.required_scopes if s not in og_decoded['scope']]:
-            raise HTTPException(403, 'missing scope')
+        # if [s for s in self.required_scopes if s not in og_decoded['scope']]:
+        #     raise HTTPException(403, 'missing scope')
+        return og_decoded
 
     #@_time_wrap
     async def __call__(self, authorization:Annotated[str|None, Header()]=None) -> Any:
