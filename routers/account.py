@@ -15,10 +15,17 @@ router = APIRouter(prefix='/account',
                 #    dependencies=[]
                    )
 
-
 @router.get('/logout')
 async def log_out(req:Request):
+    id_token:str = req.session[G_Oauth_Svc.G_ID_TOKEN_SS_KEY]
+    post_logout_url = f"{req.base_url}account/post-logout" 
+    end_session_url = f'{G_Oauth_Svc.ENDSESSION_ENDPOINT}?id_token_hint={id_token}&post_logout_redirect_uri={post_logout_url}'
+    return RedirectResponse(end_session_url)
+
+@router.get('/post-logout')
+async def method_name(req:Request):
     req.session.clear()
+    return RedirectResponse('/anon')
 
 @router.get("/login")
 async def login(request: Request):
@@ -78,7 +85,7 @@ async def callback(req: Request):
     refresh_token = json['refresh_token']
     access_token_dic = {'token': access_token, 'exp': expire_time, 'refresh': refresh_token}
     req.session[G_Oauth_Svc.G_ACCESS_TOKEN_SS_KEY] = access_token_dic
-
+    req.session[G_Oauth_Svc.G_ID_TOKEN_SS_KEY] = id_token
     userinfo_res = requests.get(
         G_Oauth_Svc.USERINFO_ENDPOINT, 
         headers = {'Authorization': f'Bearer {access_token}'},

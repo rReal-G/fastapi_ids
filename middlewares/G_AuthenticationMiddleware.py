@@ -14,7 +14,8 @@ class authentication_middleware_G(svc_G.G_Oauth_Svc):
         self.app = app
     
     async def __call__(self, scope, receive, send):
-        if scope["type"] == "http" and scope['path'] not in ['/login', '/callbackG', '/logout']:       
+        white_list = ['/anon', '/login', '/callbackG', '/logout']
+        if scope["type"] == "http" and scope['path'] not in white_list:       
             req = Request(scope)            
             auth_head:str|None = req.headers.get('authorization')
             ctx = svc_G.AuthContext(req, scope, auth_head, self)

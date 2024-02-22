@@ -28,7 +28,7 @@ class Utils_Decorators:
                 from services.G_oauth_service import  UserInfo
                 user_info:UserInfo = req.scope.get('userG', None)
                 if not user_info:
-                    return RedirectResponse('/login')
+                    return RedirectResponse('/account/login')
                 allowed_scopes = user_info.allowed_scopes
                 if [s for s in required_scopes if s not in user_info.allowed_scopes]:
                     raise HTTPException(403, 'missing scope')            

@@ -57,9 +57,7 @@ class TokenBasedHandler(BaseHandler):
         user_info = await self.extract_from_access_token(access_token)
         self._ctx.scope['userG'] = user_info
         return self._ctx
-
-
-        
+     
 class CookieBasedHandler(BaseHandler):
     async def handle(self, ctx:AuthContext):
         user_profile = self._ctx.req.session.get(G_Oauth_Svc.G_USER_PROFILE_SS_KEY, None)
@@ -85,9 +83,11 @@ class G_Oauth_Svc:
     AUTH_ENDPOINT = f"{IDS4_URL}/connect/authorize"
     TOKEN_ENDPOINT = f"{IDS4_URL}/connect/token"
     USERINFO_ENDPOINT = f"{IDS4_URL}/connect/userinfo"
+    ENDSESSION_ENDPOINT = f"{IDS4_URL}/connect/endsession"
     WELL_KNOWN_ENDPOINT = f"{IDS4_URL}/.well-known/openid-configuration"
-    REDIRECT_URI = 'http://localhost:8000/callbackG'
+    REDIRECT_URI = 'http://localhost:8000/account/callbackG'
     G_ACCESS_TOKEN_SS_KEY = 'G_ACCESS_TOKEN_KEY'
+    G_ID_TOKEN_SS_KEY = 'G_ID_TOKEN_SS_KEY'
     G_USER_PROFILE_SS_KEY = 'G_USER_INFO_SS_KEY'
     
     @property
