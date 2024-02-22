@@ -69,18 +69,20 @@ async def protected(req:Request):
         "user_info": user_info
         }
 
-
-@app.get('/call_remoted_protected')
+@app.get('/call_remoted_protected', 
+         dependencies=[Depends(G_Oauth_Svc.require_scopes(['real.G', 'lmao.hehe']))])
 async def call_remoted_protected_api(req:Request):
-    access_token:str|None = req.session.get(G_Oauth_Svc.G_ACCESS_TOKEN_SS_KEY)
-    if not access_token:
+    aiohttp_session:aiohttp.ClientSession = app.state.aiohttp_session
+    access_token_obj:str|None = req.session.get(G_Oauth_Svc.G_ACCESS_TOKEN_SS_KEY)
+    if not access_token_obj:
         return RedirectResponse('/account/login')
     url = 'https://localhost:7047/testidentity/get'
-    async with app.state.aiohttp_session.get(url) as response:
+    async with aiohttp_session.get(
+        url, headers={"Authorization": f"Bearer {access_token_obj['token']}"}) as response:
         if response.status == 200:
             x = await response.json()
             return x
         else:
-            print("Request failed:", response.status)
+            return {"Request failed:", response.status}
     
 
