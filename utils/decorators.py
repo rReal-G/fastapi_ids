@@ -4,7 +4,7 @@ from fastapi import HTTPException
 from repository import base_repository
 from sqlalchemy.orm.session import Session
 
-class Repo_Deco:
+class Utils_Decorators:
     
     @staticmethod
     def toggle_raise_for_not_found(on:bool=False, detail:str=''):

@@ -4,7 +4,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm.session import Session, sessionmaker
 from sqlalchemy.orm import selectinload
 
-from utils.repo_func_deco import Repo_Deco
+from utils.decorators import Utils_Decorators
 from models.song import Song
 from models.artist import Artist
 from models.base import BaseG
@@ -45,7 +45,7 @@ class BaseRepository:
             query = query.options(selectinload(relala))
         return query.all()
     
-    @Repo_Deco.toggle_raise_for_not_found(on=True, detail='resource not found')
+    @Utils_Decorators.toggle_raise_for_not_found(on=True, detail='resource not found')
     @session_wrapped_decorator
     def read_by_id(self, instance_id:int, 
                    orm_class: type[_BaseG_Compatible], 
@@ -82,7 +82,7 @@ class ArtistRepository(BaseRepository):
     #     db.commit()
 
     @BaseRepository.session_wrapped_decorator
-    @Repo_Deco.update_wrap
+    @Utils_Decorators.update_wrap
     def update(self, *, db:Session|None=None, 
                       instance:_BaseG_Compatible,  
                       updates:ArtistSchema_Update
